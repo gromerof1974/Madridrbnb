@@ -101,7 +101,7 @@ También se utilizarán estos datasets:
 
 El mejor enfoque para poder proporcionar una respuesta adecuada a un problema complejo, es dividir el problema en partes más pequeñas, más sencillas de responder, es por ello que se definen una serie de preguntas más específicas. Estas preguntas se hacen desde dos ángulos distintos: por un lado queremos analizar el aspecto geográfico, ¿dónde invertir?, y por otro lado lo concerniente al tipo de alojamiento a comprar ¿Qué comprar y para qué?.
 
-Un poco de geografía: La ciudad de Madrid se divide en 21 distritos. La presencia de la carretera de circunvalación M-30 actúa como barrera geográfica entre los distritos de la almendra central (interior) de los del extrarradio. Dentro de la almendra central se encuentran los siguientes distritos (entre corchetes el precio de alquiler tradicional según el portal [Idealista] a Noviembre de 2020 (https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/alquiler/madrid-comunidad/madrid-provincia/madrid/)): **Centro** [17,5 euros/m2], **Tetuán** [15,0 euros/m2], **Chamartín** [15,4 euros/m2], **Chamberí** [17,1 euros/m2], **Salamanca** [17,5 euros/m2], **Retiro** [15,0 euros/m2] y **Arganzuela** [14,6 euros/m2]. 
+Un poco de geografía: La ciudad de Madrid se divide en 21 distritos. La presencia de la carretera de circunvalación M-30 actúa como barrera geográfica entre los distritos de la almendra central (interior) de los del extrarradio. Dentro de la almendra central se encuentran los siguientes distritos (entre corchetes el precio de alquiler tradicional según el portal [Idealista](https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/alquiler/madrid-comunidad/madrid-provincia/madrid/): **Centro** [17,5 euros/m2], **Tetuán** [15,0 euros/m2], **Chamartín** [15,4 euros/m2], **Chamberí** [17,1 euros/m2], **Salamanca** [17,5 euros/m2], **Retiro** [15,0 euros/m2] y **Arganzuela** [14,6 euros/m2]. 
 
 En el extrarradio tenemos los siguientes distritos: **Barajas** [11,4 euros/m2], **Carabanchel** [11,7 euros/m2], **Ciudad Lineal** [12,8 euros/m2], **Fuencarral** [15,4 euros/m2],**Hortaleza** [12,5 euros/m2], **Latina** [11,8 euros/m2], **Moncloa** [14,3 euros/m2], **Moratalaz** [10,9 euros/m2], **Puente de Vallecas** [12,1 euros/m2], **San Blas** [11,4 euros/m2], **Usera** [11,5 euros/m2], **Vicálvaro** [10,4 euros/m2], **Villa de Vallecas** [11,2 euros/m2], **Villaverde** [10,9 euros/m2].
 
@@ -287,7 +287,9 @@ Una vez cargados los datos y analizado el contenido de cada dataset, se procede 
 
 ```{r}
 # Guardamos número de filas antes de la limpieza
-dim_ini <- nrow(df_listings)
+num_rows <- nrow(df_listings)
+# Guardamos contador de filas eliminadas
+num_deleted_rows <- 0
 ```
 
 Se comprueba la existencia de elementos vacíos.
@@ -331,6 +333,7 @@ En el caso de **availability_365**, tal y como indicaba el [diccionario de datos
 Sin embargo, para **price**, el valor cero no parece tener sentido, ya que se estaría hablando de alojamiento gratuito. En este caso, no se tendrán en cuenta los registros con **price=0**.
 
 ```{r}
+num_deleted_rows <- num_deleted_rows + nrow(df_listings[df_listings$price == 0,])
 dim(df_listings)
 df_listings <- df_listings[!(df_listings$price == 0),]
 # Comprobamos que se han eliminado registros
@@ -355,39 +358,38 @@ Se eliminan los outliers por distrito. Para ello se determina un límite de prec
 
 ```{r}
 # Se define una función para hacer la limpieza
-clean_price <- function(district_name){
+clean_data <- function(dataframe, district_name){
   district <- df_listings[df_listings$neighbourhood_group==district_name,]
   district.quantile <- quantile(district$price, probs=c(.95), na.rm=T)
   df_listings <- df_listings[df_listings$neighbourhood_group!=district_name | (df_listings$neighbourhood_group==district_name & df_listings$price<district.quantile),]
   return(df_listings)
 }
 
-dim(df_listings)
-
 # Se limpian todos los distritos
-df_listings = clean_price("Centro")
-df_listings = clean_price("Arganzuela") 
-df_listings = clean_price("Retiro") 
-df_listings = clean_price("Salamanca") 
-df_listings = clean_price("Chamartín") 
-df_listings = clean_price("Tetuán") 
-df_listings = clean_price("Chamberí") 
-df_listings = clean_price("Fuencarral - El Pardo") 
-df_listings = clean_price("Moncloa - Aravaca") 
-df_listings = clean_price("Latina") 
-df_listings = clean_price("Carabanchel") 
-df_listings = clean_price("Usera") 
-df_listings = clean_price("Puente de Vallecas") 
-df_listings = clean_price("Moratalaz") 
-df_listings = clean_price("Ciudad Lineal") 
-df_listings = clean_price("Hortaleza") 
-df_listings = clean_price("Villa de Vallecas") 
-df_listings = clean_price("Vicálvaro") 
-df_listings = clean_price("San Blas - Canillejas") 
-df_listings = clean_price("Barajas")
-df_listings = clean_price("Villaverde")
+df_listings = clean_data(df_listings, "Centro")
+df_listings = clean_data(df_listings, "Arganzuela") 
+df_listings = clean_data(df_listings, "Retiro") 
+df_listings = clean_data(df_listings, "Salamanca") 
+df_listings = clean_data(df_listings, "Chamartín") 
+df_listings = clean_data(df_listings, "Tetuán") 
+df_listings = clean_data(df_listings, "Chamberí") 
+df_listings = clean_data(df_listings, "Fuencarral - El Pardo") 
+df_listings = clean_data(df_listings, "Moncloa - Aravaca") 
+df_listings = clean_data(df_listings, "Latina") 
+df_listings = clean_data(df_listings, "Carabanchel") 
+df_listings = clean_data(df_listings, "Usera") 
+df_listings = clean_data(df_listings, "Puente de Vallecas") 
+df_listings = clean_data(df_listings, "Moratalaz") 
+df_listings = clean_data(df_listings, "Ciudad Lineal") 
+df_listings = clean_data(df_listings, "Hortaleza") 
+df_listings = clean_data(df_listings, "Villa de Vallecas") 
+df_listings = clean_data(df_listings, "Vicálvaro") 
+df_listings = clean_data(df_listings, "San Blas - Canillejas") 
+df_listings = clean_data(df_listings, "Barajas")
+df_listings = clean_data(df_listings, "Villaverde")
 
-dim(df_listings)
+#num_deleted_rows <- num_deleted_rows + (nrow(df_listings) - nrow(df_cleaned))
+#df_listings <- df_cleaned
 ```
 
 Tras la limpieza se obtiene el siguiente boxplot:
@@ -413,12 +415,10 @@ ggplot() +
 
 ```
 
-El Plan Especial de Hospedaje (PEH), que entró en vigor tras su aprobación definitiva en el Pleno municipal del 27 de marzo de 2019, limita a **90 días** la posibilidad de alquilar una vivienda con **fines turísticos** sin permiso y a partir de ese plazo obliga a obtener una licencia de uso terciario de hospedaje. Esta medida afecta al 95% de los pisos de uso turístico.
-
-Se decide no eliminar registros, en este caso de valores superiores a 90, sino limitar estos registros a un máximo de 90 noches al año.
+Se decide no eliminar registros en este caso de valores, sino limitar estos registros a un mínimo de 365 noches al año.
 
 ```{r}
-df_listings$minimum_nights[df_listings$minimum_nights > 90] <- 90
+df_listings$minimum_nights[df_listings$minimum_nights>365]<-365
 ```
 
 Tras la limpieza se obtiene el siguiente boxplot:
@@ -436,18 +436,19 @@ Los outliers se consideran válidos al haber propietarios que requieran mayor es
 Tras el proceso de limpieza, tenemos el siguiente balance:
 
 ```{r}
-num_deleted_rows <- dim_ini - nrow(df_listings)
-print(sprintf("El número total de filas eliminadas es %d, lo que representa el %.2f %% del total de los datos del dataset.", num_deleted_rows, num_deleted_rows*100/dim_ini))
+print(sprintf("El número total de filas eliminadas es %d, lo que representa el %.2f %% del total de los datos del dataset.", num_deleted_rows, num_deleted_rows*100/num_rows))
 ```
 
-Se ha eliminado un porcentaje bajo de registros. Se entiende que los outliers se han debido a problemas en el scraping al generar el dataset.
+Se ha eliminado un porcentaje alto de registros. Se entiende que los outliers se han debido a problemas en el scraping al generar el dataset.
 
 
 ## Dataframe df_reviews: Detección y gestión de datos que contienen ceros o elementos vacíos
 
 ```{r}
 # Guardamos número de filas antes de la limpieza
-dim_ini <- nrow(df_reviews)
+num_rows <- nrow(df_reviews)
+# Guardamos contador de filas eliminadas
+num_deleted_rows <- 0
 ```
 
 Se comprueba si existen elementos vacíos.
@@ -460,6 +461,7 @@ colSums(is.na(df_reviews))
 Se eliminan las reseñas sin comentarios.
 
 ```{r}
+num_deleted_rows <- num_deleted_rows + nrow(df_reviews[is.na(df_reviews$comments),])
 dim(df_reviews)
 df_reviews <- df_reviews[!is.na(df_reviews$comments),]
 # Comprobamos que se han eliminado registros
@@ -475,6 +477,7 @@ colSums(df_reviews=="")
 Se eliminan las reseñas con valores en blanco.
 
 ```{r}
+num_deleted_rows <- num_deleted_rows + nrow(df_reviews[df_reviews$comments == "",])
 dim(df_reviews)
 df_reviews <- df_reviews[!(df_reviews$comments == ""),]
 # Comprobamos que se han eliminado registros
@@ -490,8 +493,7 @@ Se decide no hacer este estudio por la naturaleza de los datos (identificadores,
 Tras el proceso de limpieza, se tiene el siguiente balance:
 
 ```{r}
-num_deleted_rows <- dim_ini - nrow(df_reviews)
-print(sprintf("El número total de filas eliminadas es %d, lo que representa el %.2f %% del total de los datos del dataset.", num_deleted_rows, num_deleted_rows*100/dim_ini))
+print(sprintf("El número total de filas eliminadas es %d, lo que representa el %.2f %% del total de los datos del dataset.", num_deleted_rows, num_deleted_rows*100/num_rows))
 ```
 
 
@@ -537,7 +539,7 @@ ggplot(neighbourhood_group_freq, aes(x = reorder(Var1, -Freq), y = Freq)) +
   theme_minimal()
 ```
 
-Se observa que el distrito **Centro** es con mucha diferencia el que más anuncios tiene. Los siguientes distritos **Salamanca**, **Chamberí**, **Arganzuela** y **Tetúan** son distritos limítrofes al centro. Están todos en el interior de la M-30.
+Se observa que el distrito **Centro** es con mucha diferencia el que más anuncios tiene. Los siguientes distritos **Salamanca**, **Arganzuela**, **Chamberí** y **Tetúan** son distritos limítrofes al centro. Están todos en el interior de la M-30.
 
 ### ¿Qué tipo de alojamiento es el más frecuente?
 
@@ -575,7 +577,6 @@ wordcloud(word_summary$word,
           rot.per=0,
           random.order=T)
 ```
-
 Las palabras más utilizadas en los títulos de los anuncios de airbnb son: apartamento o habitación en el centro.
 
 ### ¿Qué tipo de alojamiento es el más frecuente por distrito?
@@ -593,7 +594,6 @@ ggplot(df_listings, aes(fill=room_type, x=neighbourhood_group, y = price))+
   guides(fill=guide_legend(title=""))+
   coord_flip()
 ```
-
 Con la excepción de **Villaverde**, **Villa de Vallecas**, **Vicálvaro**, **San Blas - Canillejas**, **Moratalaz**,**Barajas** y **Ciudad Lineal**, en el resto de Madrid predomina el alquiler del apartamento completo en vez de habitaciones privadas o compartidas.
 
 
@@ -605,7 +605,7 @@ df_mean_price_by_neighbourhood_group <- aggregate(df_listings$price, list(df_lis
 # Ordenamos por precio
 df_mean_price_by_neighbourhood_group[order(df_mean_price_by_neighbourhood_group[,2]),]
 ```
-Se observa que **Puente de Vallecas** es el más barato y que **San Blas - Canillejas** y **Vicálvaro** son los más caros. Estos resultados son bastante extraños, ya que esas no son las zonas más caras de la capital.
+Se observa que **Villaverde** es el más barato y que **San Blas - Canillejas** y **Vicálvaro** son los más caros. Estos resultados son bastante extraños, ya que esas no son las zonas más caras de la capital.
 
 ¿Qué ocurre con **San Blas - Canillejas** y **Vicálvaro**?
 
@@ -623,11 +623,11 @@ Para solucionar este problema vamos a considerar valores extremos en estos distr
 ```{r}
 df_listings <- df_listings[!(df_listings$neighbourhood_group=="San Blas - Canillejas" & df_listings$price>150),]
 df_listings <- df_listings[!(df_listings$neighbourhood_group=="Vicálvaro" & df_listings$price>150),]
+df_listings <- df_listings[!(df_listings$neighbourhood_group=="Barajas" & df_listings$price>150),]
 df_listings <- df_listings[!(df_listings$neighbourhood_group=="Moratalaz" & df_listings$price>150),]
 df_listings <- df_listings[!(df_listings$neighbourhood_group=="Hortaleza" & df_listings$price>150),]
-df_listings <- df_listings[!(df_listings$neighbourhood_group=="Fuencarral - El Pardo" & df_listings$price>150),]
-df_listings <- df_listings[!(df_listings$neighbourhood_group=="Ciudad Lineal" & df_listings$price>150),]
 df_listings <- df_listings[!(df_listings$neighbourhood_group=="Barajas" & df_listings$price>150),]
+df_listings <- df_listings[!(df_listings$neighbourhood_group=="Fuencarral - El Pardo" & df_listings$price>150),]
 
 # Obtenemos precio medio por distrito
 df_mean_price_by_neighbourhood_group <- aggregate(df_listings$price, list(df_listings$neighbourhood_group), FUN=mean) 
@@ -664,7 +664,6 @@ ggplot(df_listings, aes(x=neighbourhood_group, y=id, fill=price_group ))+
   guides(fill=guide_legend(title=""))+
   coord_flip()
 ```
-
 En este último gráfico se aprecia la diferencia entre los precios por distritos. Mientras podemos encontrar alojamientos de cualquier tipo de precio en los distritos de la almendra central, los precios más baratos siempre están en el extrarradio.
 
 ```{r}
@@ -755,7 +754,7 @@ correlacionMatrix <- cor(df_aux)
 correlacionMatrix
 ```
 
-Se observa que el coeficiente de correlación entre ambas variables es muy bajo (0.20) 
+Se observa que el coeficiente de correlación entre ambas variables es muy bajo (0.19) 
 
 
 ```{r}
@@ -904,7 +903,7 @@ ggplot(df_listings, aes(x=price_trans, fill = room_type))+
   ggtitle('Precio logarítmico transformado')
 ```
 
-Se seleccionan las variables que vamos a  incluir en el modelo y comprobamos su correlación:
+Se seleccionan las variables que vamosa  incluir en el modelo y comprobamos su correlación:
 
 ```{r}
 df_reg <- df_listings[,c("price_trans", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude")]
@@ -919,39 +918,38 @@ df_reg <-df_listings[,c("price_trans", "minimum_nights", "reviews_per_month", "a
 
 Se observa que la correlación entre el precio y el resto de las variables es bajo.
 
-La correlación más alta se da entre **price_trans** y **longitude**, pero es muy baja. No parece tener sentido intentar generar un modelo de regresión lineal que permita predecir el precio en función de la variable longitud.
+La correlación más alta se da entre **price** y **longitude**, pero es muy baja. No parece tener sentido intentar generar un modelo de regresión lineal que permita predecir el precio en función de la variable longitud.
 
-Se crean variables dummy para las variables categóricas que incorporamos al modelo: **room_type**, **neighbourhood_group** y **neighbourhood**.
-
+Se crean variables dummy para las variables categóricas que van a entrar en el modelo: **room_type**, **
 ```{r}
 # Dummy variables para room_type
-dv = caret::dummyVars(~ room_type, data = df_reg)
+dv = caret::dummyVars(~ room_type, data=df_reg)
 dummy_room_type = data.frame(predict(dv, df_reg))
 
-# Dummy variables para neighbourhood_group
-dv = caret::dummyVars(~ neighbourhood_group, data = df_reg)
+#Dummy variables para neighbourhood_group
+dv = caret::dummyVars(~ neighbourhood_group, data=df_reg)
 dummy_neighbourhood_group = data.frame(predict(dv, df_reg))
 
-# Dummy variables para neighbourhood
-dv = caret::dummyVars(~ neighbourhood, data = df_reg)
+#Dummy variables para neighbourhood
+dv = caret::dummyVars(~ neighbourhood, data=df_reg)
 dummy_neighbourhood = data.frame(predict(dv, df_reg))
 
-# Unimos variables dummy y eliminamos las categóricas
+#Unimos y eliminamos las variables categóricas
 df_reg2 <- cbind(df_reg, dummy_room_type, dummy_neighbourhood_group, dummy_neighbourhood)
 df_reg2 <- select(df_reg2, - room_type, - neighbourhood_group, - neighbourhood)
 
-# Creamos el modelo
-model <- lm(price_trans ~ ., data = df_reg2)
+#Creamos el modelo
+model <- lm(price_trans ~ ., data=df_reg2)
 summary(model)
 ```
 
-La bondad del ajuste se mide con el parámetro R-squared que es de 0.46. Cuando este valor es próximo a 1 es indicativo de un buen modelo de ajuste. Pero no es el caso de este modelo.
+La bondad del ajuste se mide con el parámetro Adjusted R-squared que es de 0.44, cuándo este valor es próximo a 1 es indicativo de un buen modelo de ajuste. Pero no es el caso de este modelo.
 
 A continuación se evalúa su capacidad predictiva, creando un dataset de entrenamiento y test
 
 ```{r}
 # Se crean los datasets de entrenamiento y test
-n <- nrow(df_reg2)
+n<-nrow(df_reg2)
 train_index <- sample(seq_len(n), size = floor(0.75*n))
 train <- df_reg2[train_index, ]
 test <- df_reg2[-train_index, ]
@@ -962,22 +960,25 @@ model <- lm(price_trans ~., data=train)
 # Se comprueban sus resultados
 par(mfrow=c(2,2))
 plot(model)
+
+
 ```
 
 Se interpreta lo siguiente de estos gráficos:
 
-* Residuals vs Fitted: se aprecia la aleatoriedad de los resultados y como la varianza es constante a lo largo del eje X.
+* Residuals vs Fitted - se aprecia la aleatoridad de los resultados y como la varianza es constante a lo largo del eje X.
 * Normal Q-Q: muestra como los residuos se distribuyen de forma normal excepto al llegar al final del eje X. Es por ello que este modelo requiere un mejor ajuste.
 * Scale-Location: muestra como se distribuyen los residuos, se aprecia que tienen la misma varianza.
 * Residuals vs Leverage: sirve para encontrar observaciones que puedan influir en el resultado. No se aprecian puntos a eliminar.
 
 ```{r}
-# Se crea la predicción de los datos de entrenamiento
+# Se crea la predicción de los datos de entrenamiento y se añaden al dataframe
 prediction <- predict(model, test)
 
 # Se calcula el error medio cuadrático de los residuos
 rmse <- sqrt(sum((exp(prediction)-test$price_trans)^2)/length(test$price_trans))
 c(RMSE = rmse, R2 = summary(model)$r.squared)
+
 ```
 
 Un RMSE de 62 no es un buen resultado.
@@ -1052,7 +1053,7 @@ Viviendas de segunda mano, de tamaño mediano-pequeño, a reformar.
 
 El hecho de comprar viviendas de segundo mano se explica por la ausencia de promociones de obra nueva en las zonas de interés. Se explica en el siguiente punto cuáles son estas zonas.
 
-Viviendas de tamaño mediano-pequeño, ya que la vivienda preferida por los usuarios de Airbnb son los apartamentos enteros. El precio se incrementa hasta un 202% con respecto a alquilar una habitación compartida. Para compensar esto, se requerirían varias habitaciones privadas en el mismo inmueble, pero implicaría inmuebles más caros de comprar y de reformar.
+Viviendas de tamaño mediano-pequeño, ya que la vivienda preferida por los usuarios de airbnb son los apartamentos enteros. El precio se incrementa hasta un 202% con respecto a alquilar una habitación compartida. Para compensar esto, se requerirían varias habitaciones privadas en el mismo inmueble, pero implicaría inmuebles más caros de comprar y de reformar.
 
 En el análisis de palabras más utilizadas en los anuncios se observan muchos términos relacionados con la localización y tipo de inmueble, pero también hay adjetivos como: stylish, acogedor, precioso, beautiful, cozy, luxury, lovely, luminosa, spacious, lo que indica una necesidad de transformar los inmuebles de acuerdo a las tendencias de decoración minimalista actuales.
 
@@ -1069,9 +1070,9 @@ Las oportunidades serían ventas de inmuebles ya destinados al alquiler turísti
 
 La inversión debe destinarse al alquiler turístico. Es un mercado que hasta la pandemia de COVID-19 crecía de forma exponencial y al que se ven signos de recuperación. 
 
-Según las [estadísticas del Ayuntamiento de Madrid](http://www-2.munimadrid.es/CSE6/control/mostrarDatos) la superficie media de la vivienda en Madrid es de 82 m2. 
+Según las (estadísticas del Ayuntamiento de Madrid)[http://www-2.munimadrid.es/CSE6/control/seleccionDatos?numSerie=05040201030] la superficie media de la vivienda en Madrid es de 82 m2. 
 
-Según el portal [idealista](https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/alquiler/madrid-comunidad/madrid-provincia/madrid/) el precio medio del alquiler en Madrid en Noviembre de 2021 es de 14,6 euros/metro cuadrado. Por lo tanto, el precio medio del aquiler tradicional es de 1197 euros al mes.
+Según el portal (idealista)[https://www.idealista.com/sala-de-prensa/informes-precio-vivienda/alquiler/madrid-comunidad/madrid-provincia/madrid/] el precio medio del alquiler en Madrid en Noviembre de 2021 es de 14,6 euros/metro cuadrado. Por lo tanto, el precio medio del aquiler tradicional es de 1197 euros al mes.
 
 En este ejercicio se ha comprobado que el precio medio del alquiler turístico es de 88 euros/noche, por lo que llegaría a los 2640 euros al mes (considerando 30 días). Un 220% más.
 
