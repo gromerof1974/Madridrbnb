@@ -6,9 +6,11 @@ Una conocida firma de inversión inmobiliaria mexicana ha pedido realizar un est
 
 El inversor quiere respuesta a estas preguntas:
 
-¿Qué tipo de vivienda comprar?
-¿En qué zona de la capital?
-¿Qué destino se le va a dar al inmueble? Entre las opciones de alquiler turístico y tradicional.
+- ¿Qué tipo de vivienda comprar?
+
+- ¿En qué zona de la capital?
+
+- ¿Qué destino se le va a dar al inmueble? Entre las opciones de alquiler turístico y tradicional.
 
 Para responder a estas preguntas se utilizan datos de [AirBnB en Madrid](https://www.kaggle.com/rusiano/madrid-airbnb-data).
 
