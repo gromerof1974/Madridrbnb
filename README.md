@@ -16,4 +16,4 @@ Los datos de entrada se encuentran en la carpeta data_in, excepto el dataset rev
 
 El código y la documentación del proyecto se encuentra integrado en un fichero R Markdown dentro de la carpeta code.
 
-En la carpeta docs se puede encontrar la compilación del fichero R Markdown en formato html.
+En la carpeta doc se puede encontrar la compilación del fichero R Markdown en formato html.
