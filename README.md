@@ -12,12 +12,6 @@ El inversor quiere respuesta a estas preguntas:
 
 Para responder a estas preguntas se utilizan datos de [AirBnB en Madrid](https://www.kaggle.com/rusiano/madrid-airbnb-data).
 
-Los datos de entrada se encuentran en la carpeta data_in, excepto el dataset review_details.csv, que tendrá que descargarse de la red debido a su gran tamaño.
-
-El código y la documentación del proyecto se encuentra integrado en un fichero R Markdown dentro de la carpeta code.
-
-En la carpeta doc se puede encontrar la compilación del fichero R Markdown en formato html.
-
 ## Miembros del equipo
 
 - Beatriz Lozano Ballesteros
