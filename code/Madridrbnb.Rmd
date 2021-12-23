@@ -66,8 +66,11 @@ if(!require(leaflet)){
   install.packages('leaflet', repos='http://cran.us.r-project.org')
   library(leaflet)
 }
+if(!require(tm)){
+  install.packages('tm', repos='http://cran.us.r-project.org')
+  library(tm)
+}
 ```
-
 
 ******
 # Descripción del dataset
@@ -93,9 +96,7 @@ De todos los datos disponibles en este repositorio se utilizan los siguientes da
 
 - [reviews_detailed.csv](https://www.kaggle.com/rusiano/madrid-airbnb-data?select=reviews_detailed.csv): detalle de las reseñas por anuncio.
 
-También se utilizarán estos datasets:
-
-- [adjectives.csv](http://www.ashley-bovan.co.uk/words/partsofspeech.html): lista de adjetivos.
+También se utilizará el siguiente dataset:
 
 - [C5000121.xls](https://www.madrid.es/UnidadesDescentralizadas/UDCEstadistica/Nuevaweb/Demograf%C3%ADa%20y%20población/Indicadores%20Demográficos/C5000121.xls): datos de población por distrito.
 
@@ -111,7 +112,7 @@ Estas son las preguntas relativas a la geografía de Madrid:
 
 - ¿Qué tipo de alojamiento es el más frecuente por distrito?
 
-- ¿Qué distrito es el más caro? ¿Qué distrito es el más barato? ¿Existen diferencias significativas de precio para los diferentes distritos?
+- ¿Existen diferencias significativas de precio para los diferentes distritos?
 
 - ¿Cúal es la densidad de alojamientos por distrito? ¿Qué distritos tienen una mayor densidad de alojamientos por habitante?
 
@@ -145,9 +146,6 @@ rm(list = ls())
 
 # Cargamos datasets 
 df_listings <- read.csv('listings.csv', encoding = "UTF-8")
-
-df_adjectives <- read.csv("adjectives.csv")
-colnames(df_adjectives)[1]<-'word'
 
 df_reviews <- read.csv('reviews_detailed.csv', header = TRUE)
 
@@ -208,24 +206,6 @@ Se observa que el precio mínimo es 0, y el máximo 9999, lo que podría estar i
 - **availability_365**: Disponibilidad 365 días según determine el calendario. Hay que tener en cuenta que un anuncio puede no estar disponible porque ha sido reservado por un invitado o bloqueado por el anfitrión.
 
 Es el principal dataset que se va a emplear en este análisis.
-
-### adjectives.csv
-
-```{r}
-print(dfSummary(df_adjectives), method = 'render')
-```
-
-El Data Frame Summary contiene la siguiente información:
-
-- **Dimensiones**: 28478 registros x 1 variable.
-- **Duplicados**: 0.
-- **Valores nulos (columna Missing)**: 0.
-
-Hay 1 variable discreta de tipo character:
-
-- **word**: adjetivos en lengua inglesa.
-
-Este dataset se utilizará para limpiar palabras dentro del título del anuncio del alojamiento turístico.
 
 ### reviews_detailed.csv
 
@@ -398,7 +378,54 @@ ggplot() +
   coord_flip()
 ```
 
-Se observa ahora que hay varios outliers que se considerarán válidos. Se entiende razonable que algunos alojamientos tengan un precio hasta 1500 euros por noche, es la parte del lujo en airbnb.
+Obtenemos el precio medio por distrito y ordenamos por precio.
+
+```{r}
+# Obtenemos precio medio por distrito
+df_mean_price_by_neighbourhood_group <- aggregate(df_listings$price, list(df_listings$neighbourhood_group), FUN=mean) 
+# Ordenamos por precio
+df_mean_price_by_neighbourhood_group[order(df_mean_price_by_neighbourhood_group[,2]),]
+```
+
+Se observa que **Puente de Vallecas** es el más barato y que **San Blas - Canillejas** y **Vicálvaro** son los más caros. Estos resultados son bastante extraños, ya que esas no son las zonas más caras de la capital.
+
+¿Qué ocurre con **San Blas - Canillejas** y **Vicálvaro**?
+
+```{r}
+df_listings %>%
+  ggplot(aes(x=neighbourhood_group, y=price, fill=neighbourhood_group))+
+  geom_boxplot(show.legend=FALSE)+
+  coord_flip()
+```
+
+En el diagrama de cajas se aprecia un gran número de valores extremos en el distrito de **San Blas-Canillejas**. Hay un motivo principal para esta distribución tan anómala, que también afecta en menor medida a **Vicálvaro** , **Moratalaz**, **Hortaleza**, **Fuencarral - El Pardo**, **Ciudad Lineal**, y **Barajas**, y es su cercanía al estadio Wanda Metropolitano, ya que debido a la celebración de la final de la Champions League en ese estadio en 2019 los precios se dispararon en la zona. Este hecho se ve reflejado en la variable price, que contiene el mayor precio al que se alquila (o alquiló) el alojamiento turístico.
+
+Para solucionar este problema vamos a considerar valores extremos en estos distritos a cualquier valor por encima de 150 euros.
+
+```{r}
+df_listings <- df_listings[!(df_listings$neighbourhood_group=="San Blas - Canillejas" & df_listings$price>150),]
+df_listings <- df_listings[!(df_listings$neighbourhood_group=="Vicálvaro" & df_listings$price>150),]
+df_listings <- df_listings[!(df_listings$neighbourhood_group=="Moratalaz" & df_listings$price>150),]
+df_listings <- df_listings[!(df_listings$neighbourhood_group=="Hortaleza" & df_listings$price>150),]
+df_listings <- df_listings[!(df_listings$neighbourhood_group=="Fuencarral - El Pardo" & df_listings$price>150),]
+df_listings <- df_listings[!(df_listings$neighbourhood_group=="Ciudad Lineal" & df_listings$price>150),]
+df_listings <- df_listings[!(df_listings$neighbourhood_group=="Barajas" & df_listings$price>150),]
+
+# Obtenemos precio medio por distrito
+df_mean_price_by_neighbourhood_group <- aggregate(df_listings$price, list(df_listings$neighbourhood_group), FUN=mean) 
+# Ordenamos por precio
+df_mean_price_by_neighbourhood_group[order(df_mean_price_by_neighbourhood_group[,2]),]
+```
+
+Se aprecia tras corregir como los distritos situados dentro de la almendra central son los más caros, con la excepción de **Moncloa - Aravaca** que es una de las zonas de lujo de la capital.
+
+```{r}
+ggplot() + 
+  geom_boxplot(aes(y = df_listings$price), fill='#4271AE', outlier.colour='red', alpha=0.9) + 
+  scale_x_discrete( ) + 
+  labs(title ="Precio diario en euros", y = "Precio") +
+  coord_flip()
+```
 
 **minimum_nights**: el valor máximo toma un valor excesivamente alto (1125), lo que podría estar indicando una captura errónea del dato. Estos valores aparecerán como outliers.
 
@@ -492,6 +519,20 @@ num_deleted_rows <- dim_ini - nrow(df_reviews)
 print(sprintf("El número total de filas eliminadas es %d, lo que representa el %.2f %% del total de los datos del dataset.", num_deleted_rows, num_deleted_rows*100/dim_ini))
 ```
 
+## Otros tratamientos
+
+### Dateframe df_population: Normalización de los nombres de los distritos 
+
+Se limpia el dataframe para posteriormente poder unir esos con los de df_listing a partir de **neighbourhood_group**.
+
+```{r}
+# Eliminamos  los cuatro primeros caracteres del campo neighbourhood_group
+df_population$neighbourhood_group <- substring(df_population$neighbourhood_group, first = 5)
+# Reemplazamos los guiones por guiones separados por espacios
+df_population$neighbourhood_group <- gsub('-',' - ',df_population$neighbourhood_group)
+tail(df_population)
+```
+
 
 ******
 # Análisis de los datos
@@ -507,10 +548,10 @@ Para contestar a las diferentes preguntas se requieren distintos tipos de análi
 |:------|:--------------|:--------------|:------|
 |¿Qué distritos tienen más alojamientos? |Univariante |listing.csv: neighbourhood_group |Plot|
 |¿Qué tipo de alojamiento es el más frecuente? |Univariante |listing.csv: room_type |Plot| 
-|¿Cuáles son las palabras más utilizadas en el título de los anuncios de alojamientos? |Multivariante |listing.csv: id, name - adjectives.csv: word |Nube de palabras| 
+|¿Cuáles son las palabras más utilizadas en el título de los anuncios de alojamientos? |Univariante |listing.csv: name|Nube de palabras| 
 |¿Cuál es el precio medio para cada tipo de alojamiento? |Bivariante |listing.csv: price, room_type |Tabla|
 |¿Qué tipo de alojamiento es el más frecuente por distrito? |Bivariante |listing.csv: neighbourhood_group, room_type |Plot|
-|¿Qué distrito es el más caro? ¿Qué distrito es el más barato? ¿Existen diferencias significativas de precio para los diferentes distritos? |Bivariante. Test de normalidad, test de homocedasticidad, test de hipótesis. |listing.csv: neighbourhood_group, price, price_group (categorización de price) |Tabla, Plot| 
+|¿Existen diferencias significativas de precio para los diferentes distritos? |Bivariante. Test de normalidad, test de homocedasticidad, test de hipótesis. |listing.csv: id, neighbourhood_group, price, price_group (categorización de price) |Tabla, Plot| 
 |¿Cuantos alojamientos por tipo de habitación y precio hay? ¿Existen diferencias significativas de precio para los diferentes tipos de alojamiento? |Bivariante. Test de normalidad, test de homocedasticidad, test de hipótesis. |listing.csv: room_type, price, price_group (categorización de price) |Plot|
 |¿Cuál es la densidad de alojamientos por distrito? ¿Qué distritos tienen una mayor densidad de alojamientos por habitante?|Multivariante |C5000121.xls:neighbourhood_group, population - listing.csv: neighbourhood_group, longitude,latitude|Plot, Diagrama de densidad|
 |¿Existe una diferencia significativa entre el promedio de reseñas por mes para los alojamientos de tipo habitación privada y apartamento? |Bivariante: Test de normalidad, test de homocedasticidad, test de hipótesis. |listing.csv: reviews_per_month, room_type ||
@@ -518,6 +559,20 @@ Para contestar a las diferentes preguntas se requieren distintos tipos de análi
 |¿Se podría construir un modelo de regresión para predecir el precio del alojamiento en función de otras variables? |Multivariante |listing.csv: price, minimum_nights, reviews_per_month, availability_365, latitude, longitude |Plot de correlación|
 |¿Cómo es la estacionalidad en el alquiler de alojamientos turísticos? |Univariante |reviews_detailed.csv: date |Plot|
 
+
+## Selección de datos importantes y exportación a fichero
+
+Una vez realizada la limpieza y determinados los datos que se necesitan para el análisis, se guardan.
+
+```{r}
+df_listings <- df_listings[, c("id", "name", "neighbourhood_group", "neighbourhood", "latitude", "longitude", "room_type", "price", "minimum_nights", "reviews_per_month", "availability_365")]
+write.csv(df_listings, "listings_clean.csv")
+
+df_reviews <- df_reviews[, c("listing_id", "date")]
+write.csv(df_listings, "reviews_detailed_clean.csv")
+```
+
+## Pruebas estadísticas
 
 ### ¿Qué distritos tienen más alojamientos?
 
@@ -558,22 +613,21 @@ El tipo de habitación más frecuente es **Entire home/apt**, seguido de **Priva
 Se muestra el resultado con una nube de palabras.
 
 ```{r}
-word_list <- strsplit(df_listings$name," ")
-word_df <- data.frame(id = rep(df_listings$id, sapply(word_list, length)), word = tolower(unlist(word_list)))
-word_summary <- as.data.frame(merge(word_df, df_adjectives, by.x = 'word', by.y = 'word', all = T))
-colnames(word_summary) <- c('word', 'cnt_obs')
-word_summary <- aggregate(cnt_obs~word, FUN = length, data = word_summary)
-word_summary <- word_summary[!word_summary$word %in% c('la', 'con', 'en', '-', '&', 'a', 'with', 'el', '-', '2','in', 'de',' la', 'del', 'of', 'and', 'y', 'the', '1', 'city', 'to', 'para', 'for', 'near', '4','3','4','5','6','7','8','9','al','las','junto','/','at','.','muy','+',','), ]
-word_summary <- head(arrange(word_summary, desc(cnt_obs)),100)
-wordcloud(word_summary$word,
-          word_summary$cnt_obs,
-          max.words = 100,
-          scale = c (9,.2), colors = brewer.pal(5, "Blues")[-(1:2)],
-          rot.per=0,
-          random.order=T)
+wordlist <- strsplit(df_listings$name," ")
+wordlist <- as.VCorpus(wordlist)
+wordlist <- tm_map(wordlist, tolower)
+wordlist <- tm_map(wordlist, removePunctuation)
+wordlist <- tm_map(wordlist, removeNumbers)
+wordlist <- tm_map(wordlist, removeWords, stopwords(kind='en'))
+wordlist <- tm_map(wordlist, removeWords, stopwords(kind='es'))
+wordlist <- tm_map(wordlist, PlainTextDocument)
+myDTM = TermDocumentMatrix(wordlist, control = list(minWordLength=1))
+m = as.matrix(myDTM)
+v = sort(rowSums(m), decreasing=TRUE)
+wordcloud(names(v),v, min.freq=50, colors=brewer.pal(6,"Dark2"),random.order=FALSE)
 ```
 
-Las palabras más utilizadas en los títulos de los anuncios de airbnb son: apartamento o habitación en el centro.
+Las palabras más utilizadas en los títulos de los anuncios de alojamientos de Airbnb en Madrid son habitación, apartamento y centro, con sus variantes en inglés.
 
 ### ¿Qué tipo de alojamiento es el más frecuente por distrito?
 
@@ -594,49 +648,11 @@ ggplot(df_listings, aes(fill=room_type, x=neighbourhood_group, y = price))+
 Con la excepción de **Villaverde**, **Villa de Vallecas**, **Vicálvaro**, **San Blas - Canillejas**, **Moratalaz**,**Barajas** y **Ciudad Lineal**, en el resto de Madrid predomina el alquiler del apartamento completo en vez de habitaciones privadas o compartidas.
 
 
-### ¿Qué distrito es más caro? ¿Qué distrito es más barato? ¿Existen diferencias significativas de precio para los diferentes distritos?
-
-```{r}
-# Obtenemos precio medio por distrito
-df_mean_price_by_neighbourhood_group <- aggregate(df_listings$price, list(df_listings$neighbourhood_group), FUN=mean) 
-# Ordenamos por precio
-df_mean_price_by_neighbourhood_group[order(df_mean_price_by_neighbourhood_group[,2]),]
-```
-Se observa que **Puente de Vallecas** es el más barato y que **San Blas - Canillejas** y **Vicálvaro** son los más caros. Estos resultados son bastante extraños, ya que esas no son las zonas más caras de la capital.
-
-¿Qué ocurre con **San Blas - Canillejas** y **Vicálvaro**?
-
-```{r}
-df_listings %>%
-  ggplot(aes(x=neighbourhood_group, y=price, fill=neighbourhood_group))+
-  geom_boxplot(show.legend=FALSE)+
-  coord_flip()
-```
-
-En el diagrama de cajas se aprecia un gran número de valores extremos en el distrito de **San Blas-Canillejas**. Hay un motivo principal para esta distribución tan anómala, que también afecta en menor medida a **Vicálvaro** , **Moratalaz**, **Hortaleza**, **Fuencarral - El Pardo**, **Ciudad Lineal**, y **Barajas**, y es su cercanía al estadio Wanda Metropolitano, ya que debido a la celebración de la final de la Champions League en ese estadio en 2019 los precios se dispararon en la zona. Este hecho se ve reflejado en la variable price, que contiene el mayor precio al que se alquila (o alquiló) el alojamiento turístico.
-
-Para solucionar este problema vamos a considerar valores extremos en estos distritos a cualquier valor por encima de 150 euros.
-
-```{r}
-df_listings <- df_listings[!(df_listings$neighbourhood_group=="San Blas - Canillejas" & df_listings$price>150),]
-df_listings <- df_listings[!(df_listings$neighbourhood_group=="Vicálvaro" & df_listings$price>150),]
-df_listings <- df_listings[!(df_listings$neighbourhood_group=="Moratalaz" & df_listings$price>150),]
-df_listings <- df_listings[!(df_listings$neighbourhood_group=="Hortaleza" & df_listings$price>150),]
-df_listings <- df_listings[!(df_listings$neighbourhood_group=="Fuencarral - El Pardo" & df_listings$price>150),]
-df_listings <- df_listings[!(df_listings$neighbourhood_group=="Ciudad Lineal" & df_listings$price>150),]
-df_listings <- df_listings[!(df_listings$neighbourhood_group=="Barajas" & df_listings$price>150),]
-
-# Obtenemos precio medio por distrito
-df_mean_price_by_neighbourhood_group <- aggregate(df_listings$price, list(df_listings$neighbourhood_group), FUN=mean) 
-# Ordenamos por precio
-df_mean_price_by_neighbourhood_group[order(df_mean_price_by_neighbourhood_group[,2]),]
-```
-Se aprecia tras corregir como los distritos situados dentro de la almendra central son los más caros, con la excepción de **Moncloa - Aravaca** que es una de las zonas de lujo de la capital.
+### ¿Existen diferencias significativas de precio para los diferentes distritos?
 
 En los siguientes gráficos se observa la distribución de precios por distrito. Dividimos el precio en 5 grupos: **Muy bajo**, **Bajo**, **Moderado**, **Alto** y **Muy alto**.
 
 ```{r}
-
 # Obtenemos cuantiles
 quantile_price = integer(10)
 for (i in 1:10) {
@@ -744,16 +760,6 @@ El p-valor obtenido es menor al nivel de significancia (0.05), por tanto, se pue
 ### ¿Qué distritos tienen una mayor densidad de alojamientos por habitante?
 
 Para responder a esta pregunta se necesitan los datos de población por distrito cargados en el dataframe df_population.
-
-Se limpia el dataframe.
-
-```{r}
-# Eliminamos  los cuatro primeros caracteres del campo neighbourhood_group
-df_population$neighbourhood_group <- substring(df_population$neighbourhood_group, first = 5)
-# Reemplazamos los guiones por guiones separados por espacios
-df_population$neighbourhood_group <- gsub('-',' - ',df_population$neighbourhood_group)
-tail(df_population)
-```
 
 Se unen los datos de población a la tabla de frecuencias de anuncios por distrito calculada anteriormente.
 
