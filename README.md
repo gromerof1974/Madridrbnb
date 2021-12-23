@@ -21,6 +21,21 @@ Para responder a estas preguntas se utilizan datos de [AirBnB en Madrid](https:/
 
 ## Descripción de los ficheros
 
-- **data_in/**: contiene los dataset de entrada, excepto el dataset [review_details.csv](https://www.kaggle.com/rusiano/madrid-airbnb-data?select=reviews_detailed.csv), que tendrá que descargarse de la red debido a su gran tamaño.
-- **code/Madridrbnb.Rmd**: fichero R Markdown que integra el código y la documentación del proyecto. 
-- **doc/Madridrbnb.html**: compilación del fichero R Markdown en formato html.
+- **data_in/**: contiene los dataset de entrada, excepto el dataset [**review_details.csv**](https://www.kaggle.com/rusiano/madrid-airbnb-data?select=reviews_detailed.csv), que tendrá que descargarse de la red debido a su gran tamaño.
+
+  - **listings.csv**: contiene información sobre los anuncios de alojamientos turísticos de Airbnb en Madrid
+  
+  - **C5000121.xls**: contiene datos de población por distrito en la ciudad de Madrid
+
+
+- **code/**: 
+
+  - **Madridrbnb.Rmd**: fichero R Markdown que integra el código y la documentación del proyecto
+  
+  - **UOC_header.html**: cabecera incluida en el fichero Madridrbnb.Rmd
+
+- **doc/**: 
+
+  - **Madridrbnb.html**: compilación del fichero R Markdown en formato html
+
+  - **Madridrbnb.pdf**: 
