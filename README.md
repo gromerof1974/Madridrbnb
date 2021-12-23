@@ -38,4 +38,4 @@ Para responder a estas preguntas se utilizan datos de [AirBnB en Madrid](https:/
 
   - **Madridrbnb.html**: compilación del fichero R Markdown en formato html
 
-  - **Madridrbnb.pdf**: 
+  - **Madridrbnb.pdf**: respuestas a la práctica 
