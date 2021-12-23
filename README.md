@@ -27,6 +27,11 @@ Para responder a estas preguntas se utilizan datos de [AirBnB en Madrid](https:/
   
   - **C5000121.xls**: contiene datos de población por distrito en la ciudad de Madrid
 
+- **data_out/**: contiene los dataset resultado de la limpieza.
+
+  - **listings_clean.csv**
+  
+  - **reviews_detailed_clean.csv**
 
 - **code/**: 
 
