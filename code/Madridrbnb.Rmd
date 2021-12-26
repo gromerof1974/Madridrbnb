@@ -1,5 +1,3 @@
-
-
 ---
 title: 'Tipología y ciclo de vida de los datos - Madrid Airbnb Data'
 author: "Autores: Beatriz Lozano Ballesteros / Gabriel Romero Fernandez"
@@ -26,9 +24,9 @@ knitr::opts_chunk$set(eval=T, echo=T)
 
 ```{r echo=TRUE}
 # Carga de librerías
-if (!require('summarytools')){
+if (!require(summarytools)){
   install.packages('summarytools', repos='http://cran.us.r-project.org')
-  library('summarytools')
+  library(summarytools)
 } 
 if(!require(tidyverse)){
   install.packages('tidyverse', repos='http://cran.us.r-project.org')
@@ -68,8 +66,7 @@ if(!require(leaflet)){
 }
 if(!require(tm)){
   install.packages('tm', repos='http://cran.us.r-project.org')
-  library(tm)
-}
+  library(tm)}
 ```
 
 ******
@@ -521,9 +518,9 @@ print(sprintf("El número total de filas eliminadas es %d, lo que representa el 
 
 ## Otros tratamientos
 
-### Dateframe df_population: Normalización de los nombres de los distritos 
+### Dataframe df_population: Normalización de los nombres de los distritos 
 
-Se limpia el dataframe para posteriormente poder unir esos con los de df_listing a partir de **neighbourhood_group**.
+Se limpia el dataframe para posteriormente poder unir esos datos con los de df_listing usando **neighbourhood_group**.
 
 ```{r}
 # Eliminamos  los cuatro primeros caracteres del campo neighbourhood_group
@@ -532,7 +529,6 @@ df_population$neighbourhood_group <- substring(df_population$neighbourhood_group
 df_population$neighbourhood_group <- gsub('-',' - ',df_population$neighbourhood_group)
 tail(df_population)
 ```
-
 
 ******
 # Análisis de los datos
@@ -565,7 +561,7 @@ Para contestar a las diferentes preguntas se requieren distintos tipos de análi
 Una vez realizada la limpieza y determinados los datos que se necesitan para el análisis, se guardan.
 
 ```{r}
-df_listings <- df_listings[, c("id", "name", "neighbourhood_group", "neighbourhood", "latitude", "longitude", "room_type", "price", "minimum_nights", "reviews_per_month", "availability_365")]
+df_listings <- df_listings[, c("id", "name", "neighbourhood_group", "latitude", "longitude", "room_type", "price", "minimum_nights", "reviews_per_month", "availability_365")]
 write.csv(df_listings, "listings_clean.csv")
 
 df_reviews <- df_reviews[, c("listing_id", "date")]
@@ -598,7 +594,7 @@ Se observa que el distrito **Centro** es con mucha diferencia el que más anunci
 room_type_freq <- data.frame(table(df_listings$room_type))
 ggplot(room_type_freq, aes(x = reorder(Var1, -Freq), y = Freq)) +
   geom_segment(aes(x = reorder(Var1, - Freq), xend = reorder(Var1, - Freq), y = 0, yend = Freq), color = "gray", lwd = 1) +
-  geom_point(size = 6, pch = 21, bg = 4, col = 1) +
+  geom_point(size = 8, pch = 21, bg = 4, col = 1) +
   geom_text(aes(label=Freq), color = "white", size = 2) +
   xlab("Tipo de habitación") +
   ylab("Número de anuncios") +
@@ -613,17 +609,22 @@ El tipo de habitación más frecuente es **Entire home/apt**, seguido de **Priva
 Se muestra el resultado con una nube de palabras.
 
 ```{r}
+#Generamos el corpus a partir del campo name 
 wordlist <- strsplit(df_listings$name," ")
 wordlist <- as.VCorpus(wordlist)
+
+#Normalizamos los nombres
 wordlist <- tm_map(wordlist, tolower)
 wordlist <- tm_map(wordlist, removePunctuation)
 wordlist <- tm_map(wordlist, removeNumbers)
 wordlist <- tm_map(wordlist, removeWords, stopwords(kind='en'))
 wordlist <- tm_map(wordlist, removeWords, stopwords(kind='es'))
 wordlist <- tm_map(wordlist, PlainTextDocument)
-myDTM = TermDocumentMatrix(wordlist, control = list(minWordLength=1))
-m = as.matrix(myDTM)
-v = sort(rowSums(m), decreasing=TRUE)
+
+#Creamos el wordcloud
+myDTM <- TermDocumentMatrix(wordlist, control = list(minWordLength=1))
+m <- as.matrix(myDTM)
+v <- sort(rowSums(m), decreasing=TRUE)
 wordcloud(names(v),v, min.freq=50, colors=brewer.pal(6,"Dark2"),random.order=FALSE)
 ```
 
@@ -764,13 +765,10 @@ Para responder a esta pregunta se necesitan los datos de población por distrito
 Se unen los datos de población a la tabla de frecuencias de anuncios por distrito calculada anteriormente.
 
 ```{r}
-head(neighbourhood_group_freq)
 # Renombramos columnas de la tabla de frecuencias
 colnames(neighbourhood_group_freq) <- c('neighbourhood_group', 'listings')
-tail(neighbourhood_group_freq)
 # Unimos datos de población
 neighbourhood_group_freq <- join(neighbourhood_group_freq, df_population, type ='left')
-head(neighbourhood_group_freq)
 ```
 
 Se crea una nueva variable que almacene el número de habitantes por anuncio.
@@ -794,7 +792,7 @@ ggplot(neighbourhood_group_freq, aes(x = reorder(neighbourhood_group, -density),
 ```
 
 En el distrito **Centro** hay un alojamiento por cada 17 habitantes. Los 4 siguientes distritos con menor número de habitantes por alojamiento turísticos están todos en la almendra central.
-En **Villa de Vallecas** hay un alojamiento por cada 1234 habitantes. Todos los distritos con mayor número de habitantes por alojamiento turísticos están en el extrarradio.
+En **Vicálvaro** hay un alojamiento por cada 1424 habitantes. Todos los distritos con mayor número de habitantes por alojamiento turísticos están en el extrarradio.
 
 Se genera un mapa para visualizar los resultados geográficamente. Se aplica una normalización logarítmica para reducir el rango de valores. 
 
@@ -860,99 +858,6 @@ chisq.test(conting)
 
 El p-valor obtenido es menor al nivel de significancia (0.05), por tanto, se puede concluir que el tipo de habitación (**room_type**) muestra diferencias significativas para los diferentes distritos (**neighbourhood_group**).
 
-### ¿Se podría construir un modelo de regresión para predecir el precio del alojamiento en función de otras variables?
-
-Se ha comprobado anteriormente que la variable precio no sigue una distribución normal. 
-Se transforma esta variable aplicando una función logarítmica para conseguir que se ajuste a una distribución normal
-
-```{r}
-# Se crea una nueva variable con el precio en escala logarítmica 
-df_listings$price_trans <- log1p(df_listings$price)
-
-# Se comprueba la normalidad de forma gráfica
-ggplot(df_listings, aes(x=price_trans, fill = room_type))+
-  geom_density(alpha=0.5)+
-  ggtitle('Precio logarítmico transformado')
-```
-
-Se seleccionan las variables que vamos a  incluir en el modelo y comprobamos su correlación:
-
-```{r}
-df_reg <- df_listings[,c("price_trans", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude")]
-
-# Mostramos plot de matriz de correlación
-correlacionMatrix <- cor(df_reg)
-correlacionMatrix
-
-corrplot(corr = cor(correlacionMatrix, method = "pearson"), method = "number", tl.cex = 0.7,number.cex = 0.8, cl.pos = "n")
-df_reg <-df_listings[,c("price_trans", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude","neighbourhood_group","neighbourhood","room_type")]
-```
-
-Se observa que la correlación entre el precio y el resto de las variables es bajo.
-
-La correlación más alta se da entre **price_trans** y **longitude**, pero es muy baja. No parece tener sentido intentar generar un modelo de regresión lineal que permita predecir el precio en función de la variable longitud.
-
-Se crean variables dummy para las variables categóricas que incorporamos al modelo: **room_type**, **neighbourhood_group** y **neighbourhood**.
-
-```{r}
-# Dummy variables para room_type
-dv = caret::dummyVars(~ room_type, data = df_reg)
-dummy_room_type = data.frame(predict(dv, df_reg))
-
-# Dummy variables para neighbourhood_group
-dv = caret::dummyVars(~ neighbourhood_group, data = df_reg)
-dummy_neighbourhood_group = data.frame(predict(dv, df_reg))
-
-# Dummy variables para neighbourhood
-dv = caret::dummyVars(~ neighbourhood, data = df_reg)
-dummy_neighbourhood = data.frame(predict(dv, df_reg))
-
-# Unimos variables dummy y eliminamos las categóricas
-df_reg2 <- cbind(df_reg, dummy_room_type, dummy_neighbourhood_group, dummy_neighbourhood)
-df_reg2 <- select(df_reg2, - room_type, - neighbourhood_group, - neighbourhood)
-
-# Creamos el modelo
-model <- lm(price_trans ~ ., data = df_reg2)
-summary(model)
-```
-
-La bondad del ajuste se mide con el parámetro R-squared que es de 0.46. Cuando este valor es próximo a 1 es indicativo de un buen modelo de ajuste. Pero no es el caso de este modelo.
-
-A continuación se evalúa su capacidad predictiva, creando un dataset de entrenamiento y test
-
-```{r}
-# Se crean los datasets de entrenamiento y test
-n <- nrow(df_reg2)
-train_index <- sample(seq_len(n), size = floor(0.75*n))
-train <- df_reg2[train_index, ]
-test <- df_reg2[-train_index, ]
-
-# Se crea el modelo con los datos de entrenamiento
-model <- lm(price_trans ~., data=train)
-
-# Se comprueban sus resultados
-par(mfrow=c(2,2))
-plot(model)
-```
-
-Se interpreta lo siguiente de estos gráficos:
-
-* Residuals vs Fitted: se aprecia la aleatoriedad de los resultados y como la varianza es constante a lo largo del eje X.
-* Normal Q-Q: muestra como los residuos se distribuyen de forma normal excepto al llegar al final del eje X. Es por ello que este modelo requiere un mejor ajuste.
-* Scale-Location: muestra como se distribuyen los residuos, se aprecia que tienen la misma varianza.
-* Residuals vs Leverage: sirve para encontrar observaciones que puedan influir en el resultado. No se aprecian puntos a eliminar.
-
-```{r}
-# Se crea la predicción de los datos de entrenamiento
-prediction <- predict(model, test)
-
-# Se calcula el error medio cuadrático de los residuos
-rmse <- sqrt(sum((exp(prediction)-test$price_trans)^2)/length(test$price_trans))
-c(RMSE = rmse, R2 = summary(model)$r.squared)
-```
-
-Un RMSE de 62 no es un buen resultado.
-
 ### ¿Cómo es la estacionalidad en el alquiler de alojamientos turísticos?
 
 Para responder a esta pregunta hay que saber en qué momento del año se han producido los alquileres. Este dato no está disponible, pero se puede utilizar una aproximación sustituyendolo por la fecha en la que se ha hecho una reseña. Para ello se aplica el dataset **reviews_detailed.csv** que contiene un inventario de todas las reseñas realizadas.
@@ -1002,7 +907,6 @@ ggplot(reviews_count, aes(x=month)) +
 Sorprende que las reseñas se mantienen más o menos constantes a lo largo del año. Aún más que sean los meses de verano donde menos reseñas se escriben. 
 
 ```{r}
-
 ggplot(data=reviews_count, aes(x=weekday)) + 
   geom_bar(col='black', fill ='blue') +
   labs (title = "Reseñas por días", x = "Días", y="Número de alojamientos")
@@ -1010,6 +914,202 @@ ggplot(data=reviews_count, aes(x=weekday)) +
 
 Mientras que las reseñas permanecen constante a lo largo de los días de la semana, se ve un fuerte incremento en los domingos y lunes, lo que nos indica que los fines de semana es cuando más se reservan los alojamientos turísticos.
 
+### ¿Se podría construir un modelo de regresión para predecir el precio del alojamiento en función de otras variables?
+
+Se busca predecir el precio de alquiler de un alojamiento turístico (variable dependiente cuantitativa) en función de una serie de variables cualitativas y cuantitativas (variables independientes). Para ello se utiliza un modelo de regresión lineal múltiple.
+
+Se ha comprobado antes que la variable price no sigue una distribución normal, afectada sobre todo, por valores extremos debido al lujo. Se utiliza una transformación logarítmica para acercar más su distribución a la normalidad.
+
+```{r}
+df_listings$price_trans <- log2(df_listings$price)
+qqnorm(df_listings$price_trans); qqline(df_listings$price_trans)
+```
+
+Tras hacer la transformación, se observa que la nueva variable price_trans se acerca más a una distribución normal.
+
+El modelo de regresión lineal emplea la relación lineal entre dos variables para predecir el valor que va a tomar una en función del valor que toma la otra. La condición para que funcione es que ambas variables estén correlacionadas. El primer paso a la hora de plantear un modelo de regresión lineal es hacer un estudio de correlación. 
+
+```{r}
+df_reg <- df_listings[,c("price_trans", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude")]
+
+correlacionMatrix <- cor(df_reg)
+corrplot(corr = cor(correlacionMatrix, method = "pearson"), method = "number", tl.cex = 0.7,number.cex = 0.8, cl.pos = "n")
+
+# Generamos un dataset con las variables que van a formar parte del estudio
+df_reg <-df_listings[,c("price_trans", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude","neighbourhood_group","room_type")]
+```
+
+Se observa que la correlación entre el precio y el resto de las variables es bajo.
+
+La correlación más alta se da entre **price_trans** y **longitude**, pero es muy baja (-0.34). 
+
+Se convierten en factores los distintos valores de las variables categóricas, y se usan los valores con mayor peso como valores de referencia. En este caso sería el distrito Centro y el tipo de habitación Entire home/apartment.
+
+```{r}
+df_reg$neighbourhood_group <- as.factor(df_reg$neighbourhood_group)
+df_reg$room_type <- as.factor(df_reg$room_type)
+df_reg$neighbourhood_group <- relevel(df_reg$neighbourhood_group, ref="Centro")
+df_reg$room_type <- relevel (df_reg$room_type, ref="Entire home/apt")
+```
+
+Se crean distintos modelos usando distintas combinaciones de las variables cualitativas y cuantitativas
+
+```{r}
+model1 <- lm(price_trans ~., data=df_reg)
+model2 <- lm(price_trans ~ reviews_per_month + room_type + neighbourhood_group, data=df_reg)
+model3 <- lm(price_trans ~ reviews_per_month + longitude + latitude + room_type + neighbourhood_group, data=df_reg)
+model4 <- lm(price_trans ~ reviews_per_month + longitude + latitude + minimum_nights + room_type + neighbourhood_group, data=df_reg)
+model5 <- lm(price_trans ~ minimum_nights + room_type + neighbourhood_group, data=df_reg)
+model6 <- lm(price_trans ~ availability_365 + room_type + neighbourhood_group, data=df_reg)
+model7 <- lm(price_trans ~ reviews_per_month + room_type + neighbourhood_group +longitude:latitude, data=df_reg)
+model8 <- lm(price_trans ~ room_type + neighbourhood_group + reviews_per_month:availability_365, data=df_reg)
+model9 <- lm(price_trans ~ room_type + neighbourhood_group, data=df_reg)
+```
+
+La bondad del ajuste se mide con el parámetro Adjusted R-squared, cuándo este valor es próximo a 1 es indicativo de un buen modelo de ajuste. Se utiliza este parámetro para elegir el modelo con el mejor coeficiente.
+
+```{r}
+#Generamos los coeficientes de determinación de cada modelo
+tabla.coef <- matrix(c(1, summary(model1)$r.squared,
+                       2, summary(model2)$r.squared,
+                       3, summary(model3)$r.squared,
+                       4, summary(model4)$r.squared,
+                       5, summary(model5)$r.squared,
+                       6, summary(model6)$r.squared,
+                       7, summary(model7)$r.squared,
+                       8, summary(model8)$r.squared,
+                       9, summary(model9)$r.squared),
+                     ncol=2,byrow=TRUE)
+colnames(tabla.coef) <-c("Modelo","R-squared")
+tabla.coef
+```
+
+Se elige como mejor modelo a áquel que tiene el coeficiente de determinación mayor. En este caso el modelo 1.
+
+Por último, para profundizar en la calidad del ajuste deben analizarse los residuos que nos indicarán realmente cómo se ajusta nuestro modelo a los datos muestrales.
+
+Para obtener los residuos se aplica la función [rstandard](https://www.rdocumentation.org/packages/TSA/versions/1.3/topics/rstandard.Arima) sobre el modelo. Esta función devuelve los residuos. A continuación se estudian sus estadísticos
+
+```{r}
+residuos <- model1$residuals
+summary(residuos)
+boxplot(residuos)
+qqnorm(residuos)
+qqline(residuos)
+```
+
+Los residuos siguen una distribución aparentemente normal, la distribución de los datos es simétrica respecto a su mediana, y el tamaño de la caja desde el primer al tercer cuartil es también simétrica respecto a la mediana, que está a su vez, centrada en el 0.
+
+Se genera también la gráfica de residuos vs valores ajustados. Esta gráfica muestra los residuos en el eje Y y los valores ajustados en el eje X. Se utiliza para verificar el supuesto de que los residuos están distribuidos aleatoriamente y tienen una varianza constante. Lo ideal es que los puntos se ubiquen aleatoriamente a ambos lados del eje X.
+
+Si existe una dispersión en abanico es síntoma de que la varianza no es constante. Esto también se aprecia en la línea azul que fluctúa a lo largo del eje X.
+
+```{r}
+# Comparamos los valores ajustados con los residuos
+ggplot(data=df_reg, aes(model1$fitted.values, model1$residuals)) + 
+  geom_point() + 
+  geom_smooth(color ="blue", se = FALSE)+
+  geom_hline(yintercept = 0) + 
+  ggtitle('Valores ajustados vs Residuos')+
+  theme_bw()
+```
+Respecto a la bondad del modelo, se observan estos parámetros:
+
+```{r}
+summary(model1)
+```
+
+Residual standard error: 0.7378 on 18248 degrees of freedom.
+
+Multiple R-squared:  0.4512,	Adjusted R-squared:  0.4504
+
+F-statistic:  535.8 on 28 and 18248 DF,  p-value: < 2.2e-16.
+
+El RSE es la desviación estandar de los residuos, cuánto menor mejor. 
+
+El modelo es capaz de explicar el 45% de la variabilidad observada en los precios
+
+El test F muestra un p-value menor de 0.05 por lo que el modelo en conjunto es significativo.
+
+## Modelo de regresión logística
+
+Se prueba ahora un modelo que sea capaz de calcular la probabilidad de que el precio de alquiler de un alojamiento turístico supere los 100 euros por noche.
+Para ello discretizamos la variable precio en dos categorías: <= 100 euros y >100 euros
+
+```{r}
+#Creamos la variable dependiente cualitativa dicotómica price_100
+df_listings$price_100 <- factor(ifelse(df_listings$price>100,"Yes","No"))
+
+#Preparamos los datos para la regresión
+df_reg <-df_listings[,c("price_100", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude","neighbourhood_group","room_type")]
+df_reg$neighbourhood_group <- as.factor(df_reg$neighbourhood_group)
+df_reg$room_type <- as.factor(df_reg$room_type)
+df_reg$neighbourhood_group <- relevel(df_reg$neighbourhood_group, ref="Centro")
+df_reg$room_type <- relevel (df_reg$room_type, ref="Entire home/apt")
+```
+
+Creamos distintos modelos usando distintas combinaciones de las variables cualitativas y cuantitativas
+
+```{r}
+#Generamos distintos modelos
+logi1 <- glm(formula = price_100 ~ ., data=df_reg, family= binomial(link=logit))
+logi2 <- glm(formula = price_100 ~ reviews_per_month + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
+logi3 <- glm(formula = price_100 ~ reviews_per_month + longitude + latitude + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
+logi4 <- glm(formula = price_100 ~ reviews_per_month + longitude + latitude + minimum_nights + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
+logi5 <- glm(formula = price_100 ~ minimum_nights + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
+logi6 <- glm(formula = price_100 ~ availability_365 + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
+logi7 <- glm(formula = price_100 ~ reviews_per_month + room_type + neighbourhood_group +longitude:latitude, data=df_reg, family= binomial(link=logit))
+logi8 <- glm(formula = price_100 ~ room_type + neighbourhood_group + reviews_per_month:availability_365, data=df_reg, family= binomial(link=logit))
+logi9 <- glm(formula = price_100 ~ room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
+```
+
+La bondad del ajuste se va a medir con el criterio de información de Akaike. El menor de los valores nos indicará cual es el mejor modelo. En este caso el modelo 1.
+
+```{r}
+#Generamos los AIC (criterio de información de Akaike) para comparar los modelos
+tabla.coef <- matrix(c(1, summary(logi1)$aic,
+                       2, summary(logi2)$aic,
+                       3, summary(logi3)$aic,
+                       4, summary(logi4)$aic,
+                       5, summary(logi5)$aic,
+                       6, summary(logi6)$aic,
+                       7, summary(logi7)$aic,
+                       8, summary(logi8)$aic,
+                       9, summary(logi9)$aic),
+                     ncol=2,byrow=TRUE)
+colnames(tabla.coef) <-c("Modelo","R-squared")
+tabla.coef
+```
+Se analiza la precisión del modelo, comparando la predicción del modelo contra un conjunto de prueba (train-test).
+
+```{r}
+#Generamos los datos de entrenamiento y test
+set.seed(100)
+n<-nrow(df_reg)
+train_index <- sample(1:n, size=round(0.8*n), replace=FALSE)
+train <- df_reg[train_index,]
+test <- df_reg[-train_index,]
+
+#Generamos el modelo
+logist1 <- glm(formula = price_100 ~ ., data=train, family= binomial(link=logit))
+summary(logist1)
+```
+
+Se aplica el modelo a los datos de test que habíamos generado
+
+```{r}
+#Generamos las predicciones
+predicted <- predict(logist1, test, type="response")
+predicted <-ifelse(predicted<0.5,"No","Yes")
+#Generamos la matriz de confusion
+confusionMatrix(test$price_100, as.factor(predicted))
+```
+
+La matriz de confusión nos da una exactitud del 82.2%, esto es, la habilidad del modelo para detectar correctamente los alquileres por encima y debajo de 100 euros.
+
+La sensibilidad es del 82.5%, es la habilidad de detectar verdaderos positivos en el total de positivos que hay en la realidad. Consideramos como positivo el que el alquiler sea mayor de 100 euros la noche.
+
+La especificidad es del 58.5%, es la habilidad del modelo de detectar verdaderos negativos en el total de negativos reales. El modelo es solo capaz de predecir el 58.5% de los casos reales donde el precio es mayor de 100 euros.
 
 ******
 # Conclusiones
@@ -1023,7 +1123,7 @@ Viviendas de segunda mano, de tamaño mediano-pequeño, a reformar.
 
 El hecho de comprar viviendas de segundo mano se explica por la ausencia de promociones de obra nueva en las zonas de interés. Se explica en el siguiente punto cuáles son estas zonas.
 
-Viviendas de tamaño mediano-pequeño, ya que la vivienda preferida por los usuarios de Airbnb son los apartamentos enteros. El precio se incrementa hasta un 202% con respecto a alquilar una habitación compartida. Para compensar esto, se requerirían varias habitaciones privadas en el mismo inmueble, pero implicaría inmuebles más caros de comprar y de reformar.
+Viviendas de tamaño mediano-pequeño, ya que la vivienda preferida por los usuarios de Airbnb son los apartamentos enteros. El precio se incrementa hasta un 250% con respecto a alquilar una habitación compartida. Para compensar esto, se requerirían varias habitaciones privadas en el mismo inmueble, pero implicaría inmuebles más caros de comprar y de reformar.
 
 En el análisis de palabras más utilizadas en los anuncios se observan muchos términos relacionados con la localización y tipo de inmueble, pero también hay adjetivos como: stylish, acogedor, precioso, beautiful, cozy, luxury, lovely, luminosa, spacious, lo que indica una necesidad de transformar los inmuebles de acuerdo a las tendencias de decoración minimalista actuales.
 
