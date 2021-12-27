@@ -33,6 +33,8 @@ Para responder a estas preguntas se utilizan datos de [AirBnB en Madrid](https:/
   
   - **reviews_detailed_clean.csv**
 
+  - **population_clean.csv**: resultado de limpiar **C5000121.xls**
+
 - **code/**: 
 
   - **Madridrbnb.Rmd**: fichero R Markdown que integra el código y la documentación del proyecto
