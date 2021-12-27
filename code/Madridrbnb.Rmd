@@ -1034,88 +1034,25 @@ El modelo es capaz de explicar el **45% de la variabilidad observada en los prec
 
 El test F muestra un p-value menor de 0.05 por lo que el modelo en conjunto es significativo.
 
-#### Modelo de regresión logística
+Otra manera de comprobar la bondad del ajuste es realizar una validación cruzada. La validación cruzada es un método de remuestreo iterativo. Consiste en dividir los datos de forma aleatoria en k grupos del mismo tamaño, k-1 grupos se emplean para entrenar el modelo y uno de los grupos se emplea como validación. Este proceso se repite k veces un grupo distinto como validación en cada iteración. El proceso genera k estimaciones del error cuyo promedio se utiliza como estimación final.
 
-Se prueba ahora un modelo que sea capaz de calcular la **probabilidad de que el precio de alquiler de un alojamiento turístico supere los 100 euros por noche**.
-Para ello discretizamos la variable precio en dos categorías: <= 100 euros y >100 euros.
 
-```{r}
-#Creamos la variable dependiente cualitativa dicotómica price_100
-df_listings$price_100 <- factor(ifelse(df_listings$price > 100,"Yes","No"))
+En este caso aplicamos una validación cruzada (k-fold cross validation) con k= 10
 
-#Preparamos los datos para la regresión
-df_reg <-df_listings[,c("price_100", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude","neighbourhood_group","room_type")]
-df_reg$neighbourhood_group <- as.factor(df_reg$neighbourhood_group)
-df_reg$room_type <- as.factor(df_reg$room_type)
-df_reg$neighbourhood_group <- relevel(df_reg$neighbourhood_group, ref="Centro")
-df_reg$room_type <- relevel (df_reg$room_type, ref="Entire home/apt")
-```
-
-Creamos distintos modelos usando distintas combinaciones de las variables cualitativas y cuantitativas.
 
 ```{r}
-#Generamos distintos modelos
-logi1 <- glm(formula = price_100 ~ ., data=df_reg, family= binomial(link=logit))
-logi2 <- glm(formula = price_100 ~ reviews_per_month + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
-logi3 <- glm(formula = price_100 ~ reviews_per_month + longitude + latitude + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
-logi4 <- glm(formula = price_100 ~ reviews_per_month + longitude + latitude + minimum_nights + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
-logi5 <- glm(formula = price_100 ~ minimum_nights + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
-logi6 <- glm(formula = price_100 ~ availability_365 + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
-logi7 <- glm(formula = price_100 ~ reviews_per_month + room_type + neighbourhood_group + longitude:latitude, data=df_reg, family= binomial(link=logit))
-logi8 <- glm(formula = price_100 ~ room_type + neighbourhood_group + reviews_per_month:availability_365, data=df_reg, family= binomial(link=logit))
-logi9 <- glm(formula = price_100 ~ room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
+
+set.seed(123)
+
+train.control <- trainControl(method="cv", number=10)
+
+model <- train(price_trans ~., data=df_reg, method="lm", trControl = train.control)
+
+print(model)
+
 ```
 
-La bondad del ajuste se va a medir con el criterio de información de Akaike. El menor de los valores nos indicará cual es el mejor modelo. En este caso el modelo 1.
-
-```{r}
-#Generamos los AIC (criterio de información de Akaike) para comparar los modelos
-tabla.coef <- matrix(c(1, summary(logi1)$aic,
-                       2, summary(logi2)$aic,
-                       3, summary(logi3)$aic,
-                       4, summary(logi4)$aic,
-                       5, summary(logi5)$aic,
-                       6, summary(logi6)$aic,
-                       7, summary(logi7)$aic,
-                       8, summary(logi8)$aic,
-                       9, summary(logi9)$aic),
-                     ncol=2,byrow=TRUE)
-colnames(tabla.coef) <-c("Modelo","AIC")
-tabla.coef
-```
-
-Se analiza la precisión del modelo, comparando la predicción del modelo contra un conjunto de prueba (train-test).
-
-```{r}
-#Generamos los datos de entrenamiento y test
-set.seed(100)
-n<-nrow(df_reg)
-train_index <- sample(1:n, size=round(0.8*n), replace=FALSE)
-train <- df_reg[train_index,]
-test <- df_reg[-train_index,]
-
-#Generamos el modelo
-logist1 <- glm(formula = price_100 ~ ., data=train, family= binomial(link=logit))
-summary(logist1)
-```
-
-Se aplica el modelo a los datos de test que habíamos generado
-
-```{r}
-#Generamos las predicciones
-predicted <- predict(logist1, test, type="response")
-predicted <- ifelse(predicted < 0.5,"No","Yes")
-#Generamos la matriz de confusion
-confusionMatrix(test$price_100, as.factor(predicted))
-```
-
-La matriz de confusión arroja los siguientes resultados
-
-- Exactitud (**Accuracy**): 82.2%. Es la habilidad del modelo para detectar correctamente los alquileres por encima y debajo de 100 euros.
-
-- Sensibilidad (**Sensitivity**): 82.5%. Es la habilidad de detectar verdaderos positivos en el total de positivos que hay en la realidad. Consideramos como positivo el que el alquiler sea mayor de 100 euros la noche.
-
-- Especificidad (**Specificity**): 58.5%. Es la habilidad del modelo de detectar verdaderos negativos en el total de negativos reales. El modelo es solo capaz de predecir el 58.5% de los casos reales donde el precio es mayor de 100 euros.
+Como se puede apreciar los resultados son prácticamente iguales a los anteriormente explicados.
 
 ******
 # Conclusiones
