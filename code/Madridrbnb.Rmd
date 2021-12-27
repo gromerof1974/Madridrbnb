@@ -566,6 +566,8 @@ write.csv(df_listings, "listings_clean.csv")
 
 df_reviews <- df_reviews[, c("listing_id", "date")]
 write.csv(df_listings, "reviews_detailed_clean.csv")
+
+write.csv(df_population, "population_clean.csv")
 ```
 
 ## Pruebas estadísticas
@@ -916,18 +918,20 @@ Mientras que las reseñas permanecen constante a lo largo de los días de la sem
 
 ### ¿Se podría construir un modelo de regresión para predecir el precio del alojamiento en función de otras variables?
 
-Se busca predecir el precio de alquiler de un alojamiento turístico (variable dependiente cuantitativa) en función de una serie de variables cualitativas y cuantitativas (variables independientes). Para ello se utiliza un modelo de regresión lineal múltiple.
+#### Modelo de regresión lineal múltiple
 
-Se ha comprobado antes que la variable price no sigue una distribución normal, afectada sobre todo, por valores extremos debido al lujo. Se utiliza una transformación logarítmica para acercar más su distribución a la normalidad.
+Se busca predecir el precio de alquiler de un alojamiento turístico (variable dependiente cuantitativa) en función de una serie de variables cualitativas y cuantitativas (variables independientes). Para ello se utiliza un **modelo de regresión lineal múltiple**.
+
+Se ha comprobado antes que la variable **price no sigue una distribución normal**, afectada sobre todo, por valores extremos debido al lujo. Se utiliza una **transformación logarítmica** para acercar más su distribución a la normalidad.
 
 ```{r}
 df_listings$price_trans <- log2(df_listings$price)
 qqnorm(df_listings$price_trans); qqline(df_listings$price_trans)
 ```
 
-Tras hacer la transformación, se observa que la nueva variable price_trans se acerca más a una distribución normal.
+Tras hacer la transformación, se observa que la nueva variable **price_trans** se acerca más a una distribución normal.
 
-El modelo de regresión lineal emplea la relación lineal entre dos variables para predecir el valor que va a tomar una en función del valor que toma la otra. La condición para que funcione es que ambas variables estén correlacionadas. El primer paso a la hora de plantear un modelo de regresión lineal es hacer un estudio de correlación. 
+El modelo de regresión lineal emplea la relación lineal entre dos variables para predecir el valor que va a tomar una en función del valor que toma la otra. La condición para que funcione es que ambas variables estén correlacionadas. El primer paso a la hora de plantear un modelo de regresión lineal es hacer un **estudio de correlación**. 
 
 ```{r}
 df_reg <- df_listings[,c("price_trans", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude")]
@@ -936,14 +940,14 @@ correlacionMatrix <- cor(df_reg)
 corrplot(corr = cor(correlacionMatrix, method = "pearson"), method = "number", tl.cex = 0.7,number.cex = 0.8, cl.pos = "n")
 
 # Generamos un dataset con las variables que van a formar parte del estudio
-df_reg <-df_listings[,c("price_trans", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude","neighbourhood_group","room_type")]
+df_reg <- df_listings[,c("price_trans", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude","neighbourhood_group","room_type")]
 ```
 
-Se observa que la correlación entre el precio y el resto de las variables es bajo.
+Se observa que la **correlación entre el precio y el resto de las variables es bajo**.
 
 La correlación más alta se da entre **price_trans** y **longitude**, pero es muy baja (-0.34). 
 
-Se convierten en factores los distintos valores de las variables categóricas, y se usan los valores con mayor peso como valores de referencia. En este caso sería el distrito Centro y el tipo de habitación Entire home/apartment.
+Se convierten en factores los distintos valores de las variables categóricas, y se usan los valores con mayor peso como **valores de referencia**. En este caso serán el distrito **Centro** y el tipo de habitación **Entire home/apartment**.
 
 ```{r}
 df_reg$neighbourhood_group <- as.factor(df_reg$neighbourhood_group)
@@ -961,12 +965,12 @@ model3 <- lm(price_trans ~ reviews_per_month + longitude + latitude + room_type 
 model4 <- lm(price_trans ~ reviews_per_month + longitude + latitude + minimum_nights + room_type + neighbourhood_group, data=df_reg)
 model5 <- lm(price_trans ~ minimum_nights + room_type + neighbourhood_group, data=df_reg)
 model6 <- lm(price_trans ~ availability_365 + room_type + neighbourhood_group, data=df_reg)
-model7 <- lm(price_trans ~ reviews_per_month + room_type + neighbourhood_group +longitude:latitude, data=df_reg)
+model7 <- lm(price_trans ~ reviews_per_month + room_type + neighbourhood_group + longitude:latitude, data=df_reg)
 model8 <- lm(price_trans ~ room_type + neighbourhood_group + reviews_per_month:availability_365, data=df_reg)
 model9 <- lm(price_trans ~ room_type + neighbourhood_group, data=df_reg)
 ```
 
-La bondad del ajuste se mide con el parámetro Adjusted R-squared, cuándo este valor es próximo a 1 es indicativo de un buen modelo de ajuste. Se utiliza este parámetro para elegir el modelo con el mejor coeficiente.
+La **bondad del ajuste** se mide con el parámetro **Adjusted R-squared**, cuándo este valor es próximo a 1 es indicativo de un buen modelo de ajuste. Se utiliza este parámetro para elegir el modelo con el mejor coeficiente.
 
 ```{r}
 #Generamos los coeficientes de determinación de cada modelo
@@ -984,9 +988,9 @@ colnames(tabla.coef) <-c("Modelo","R-squared")
 tabla.coef
 ```
 
-Se elige como mejor modelo a áquel que tiene el coeficiente de determinación mayor. En este caso el modelo 1.
+Se elige como **mejor modelo** a áquel que tiene el **coeficiente de determinación mayor**. En este caso el modelo 1.
 
-Por último, para profundizar en la calidad del ajuste deben analizarse los residuos que nos indicarán realmente cómo se ajusta nuestro modelo a los datos muestrales.
+Por último, para profundizar en la calidad del ajuste deben analizarse los **residuos** que nos indicarán realmente cómo se ajusta nuestro modelo a los datos muestrales.
 
 Para obtener los residuos se aplica la función [rstandard](https://www.rdocumentation.org/packages/TSA/versions/1.3/topics/rstandard.Arima) sobre el modelo. Esta función devuelve los residuos. A continuación se estudian sus estadísticos
 
@@ -1000,7 +1004,7 @@ qqline(residuos)
 
 Los residuos siguen una distribución aparentemente normal, la distribución de los datos es simétrica respecto a su mediana, y el tamaño de la caja desde el primer al tercer cuartil es también simétrica respecto a la mediana, que está a su vez, centrada en el 0.
 
-Se genera también la gráfica de residuos vs valores ajustados. Esta gráfica muestra los residuos en el eje Y y los valores ajustados en el eje X. Se utiliza para verificar el supuesto de que los residuos están distribuidos aleatoriamente y tienen una varianza constante. Lo ideal es que los puntos se ubiquen aleatoriamente a ambos lados del eje X.
+A continuación, se genera también la gráfica de residuos vs valores ajustados. Esta gráfica muestra los residuos en el eje Y y los valores ajustados en el eje X. Se utiliza para verificar el supuesto de que los residuos están distribuidos aleatoriamente y tienen una varianza constante. Lo ideal es que los puntos se ubiquen aleatoriamente a ambos lados del eje X.
 
 Si existe una dispersión en abanico es síntoma de que la varianza no es constante. Esto también se aprecia en la línea azul que fluctúa a lo largo del eje X.
 
@@ -1013,32 +1017,33 @@ ggplot(data=df_reg, aes(model1$fitted.values, model1$residuals)) +
   ggtitle('Valores ajustados vs Residuos')+
   theme_bw()
 ```
-Respecto a la bondad del modelo, se observan estos parámetros:
+
+Respecto a la bondad del modelo, se observan los siguientes parámetros:
 
 ```{r}
 summary(model1)
 ```
 
-Residual standard error: 0.7378 on 18248 degrees of freedom.
+- **Residual standard error**: 0.7378 on 18248 degrees of freedom.
 
-Multiple R-squared:  0.4512,	Adjusted R-squared:  0.4504
+- **Multiple R-squared**:  0.4512,	Adjusted R-squared:  0.4504
 
-F-statistic:  535.8 on 28 and 18248 DF,  p-value: < 2.2e-16.
+- **F-statistic**:  535.8 on 28 and 18248 DF,  p-value: < 2.2e-16.
 
-El RSE es la desviación estandar de los residuos, cuánto menor mejor. 
+El **RSE (Residual standard error)** es la desviación estandar de los residuos, cuánto menor mejor. 
 
-El modelo es capaz de explicar el 45% de la variabilidad observada en los precios
+El modelo es capaz de explicar el **45% de la variabilidad observada en los precios**.
 
 El test F muestra un p-value menor de 0.05 por lo que el modelo en conjunto es significativo.
 
-## Modelo de regresión logística
+#### Modelo de regresión logística
 
-Se prueba ahora un modelo que sea capaz de calcular la probabilidad de que el precio de alquiler de un alojamiento turístico supere los 100 euros por noche.
-Para ello discretizamos la variable precio en dos categorías: <= 100 euros y >100 euros
+Se prueba ahora un modelo que sea capaz de calcular la **probabilidad de que el precio de alquiler de un alojamiento turístico supere los 100 euros por noche**.
+Para ello discretizamos la variable precio en dos categorías: <= 100 euros y >100 euros.
 
 ```{r}
 #Creamos la variable dependiente cualitativa dicotómica price_100
-df_listings$price_100 <- factor(ifelse(df_listings$price>100,"Yes","No"))
+df_listings$price_100 <- factor(ifelse(df_listings$price > 100,"Yes","No"))
 
 #Preparamos los datos para la regresión
 df_reg <-df_listings[,c("price_100", "minimum_nights", "reviews_per_month", "availability_365", "latitude", "longitude","neighbourhood_group","room_type")]
@@ -1048,7 +1053,7 @@ df_reg$neighbourhood_group <- relevel(df_reg$neighbourhood_group, ref="Centro")
 df_reg$room_type <- relevel (df_reg$room_type, ref="Entire home/apt")
 ```
 
-Creamos distintos modelos usando distintas combinaciones de las variables cualitativas y cuantitativas
+Creamos distintos modelos usando distintas combinaciones de las variables cualitativas y cuantitativas.
 
 ```{r}
 #Generamos distintos modelos
@@ -1058,7 +1063,7 @@ logi3 <- glm(formula = price_100 ~ reviews_per_month + longitude + latitude + ro
 logi4 <- glm(formula = price_100 ~ reviews_per_month + longitude + latitude + minimum_nights + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
 logi5 <- glm(formula = price_100 ~ minimum_nights + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
 logi6 <- glm(formula = price_100 ~ availability_365 + room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
-logi7 <- glm(formula = price_100 ~ reviews_per_month + room_type + neighbourhood_group +longitude:latitude, data=df_reg, family= binomial(link=logit))
+logi7 <- glm(formula = price_100 ~ reviews_per_month + room_type + neighbourhood_group + longitude:latitude, data=df_reg, family= binomial(link=logit))
 logi8 <- glm(formula = price_100 ~ room_type + neighbourhood_group + reviews_per_month:availability_365, data=df_reg, family= binomial(link=logit))
 logi9 <- glm(formula = price_100 ~ room_type + neighbourhood_group, data=df_reg, family= binomial(link=logit))
 ```
@@ -1077,9 +1082,10 @@ tabla.coef <- matrix(c(1, summary(logi1)$aic,
                        8, summary(logi8)$aic,
                        9, summary(logi9)$aic),
                      ncol=2,byrow=TRUE)
-colnames(tabla.coef) <-c("Modelo","R-squared")
+colnames(tabla.coef) <-c("Modelo","AIC")
 tabla.coef
 ```
+
 Se analiza la precisión del modelo, comparando la predicción del modelo contra un conjunto de prueba (train-test).
 
 ```{r}
@@ -1100,16 +1106,18 @@ Se aplica el modelo a los datos de test que habíamos generado
 ```{r}
 #Generamos las predicciones
 predicted <- predict(logist1, test, type="response")
-predicted <-ifelse(predicted<0.5,"No","Yes")
+predicted <- ifelse(predicted < 0.5,"No","Yes")
 #Generamos la matriz de confusion
 confusionMatrix(test$price_100, as.factor(predicted))
 ```
 
-La matriz de confusión nos da una exactitud del 82.2%, esto es, la habilidad del modelo para detectar correctamente los alquileres por encima y debajo de 100 euros.
+La matriz de confusión arroja los siguientes resultados
 
-La sensibilidad es del 82.5%, es la habilidad de detectar verdaderos positivos en el total de positivos que hay en la realidad. Consideramos como positivo el que el alquiler sea mayor de 100 euros la noche.
+- Exactitud (**Accuracy**): 82.2%. Es la habilidad del modelo para detectar correctamente los alquileres por encima y debajo de 100 euros.
 
-La especificidad es del 58.5%, es la habilidad del modelo de detectar verdaderos negativos en el total de negativos reales. El modelo es solo capaz de predecir el 58.5% de los casos reales donde el precio es mayor de 100 euros.
+- Sensibilidad (**Sensitivity**): 82.5%. Es la habilidad de detectar verdaderos positivos en el total de positivos que hay en la realidad. Consideramos como positivo el que el alquiler sea mayor de 100 euros la noche.
+
+- Especificidad (**Specificity**): 58.5%. Es la habilidad del modelo de detectar verdaderos negativos en el total de negativos reales. El modelo es solo capaz de predecir el 58.5% de los casos reales donde el precio es mayor de 100 euros.
 
 ******
 # Conclusiones
