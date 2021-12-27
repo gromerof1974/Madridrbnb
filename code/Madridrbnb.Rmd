@@ -992,8 +992,6 @@ Se elige como **mejor modelo** a áquel que tiene el **coeficiente de determinac
 
 Por último, para profundizar en la calidad del ajuste deben analizarse los **residuos** que nos indicarán realmente cómo se ajusta nuestro modelo a los datos muestrales.
 
-Para obtener los residuos se aplica la función [rstandard](https://www.rdocumentation.org/packages/TSA/versions/1.3/topics/rstandard.Arima) sobre el modelo. Esta función devuelve los residuos. A continuación se estudian sus estadísticos
-
 ```{r}
 residuos <- model1$residuals
 summary(residuos)
