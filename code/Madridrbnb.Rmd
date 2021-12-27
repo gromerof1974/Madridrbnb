@@ -732,7 +732,7 @@ ggplot(df_listings, aes(x=price, fill=room_type))+
   geom_density(alpha=0.5)
 ```
 
-Un alquiler de un apartamento completo tiene un precio similar al de una habitación de hotel, y es un 216% más caro que una habitación privada y un 228% más caro que una habitación compartida.
+Un alquiler de un apartamento completo tiene un precio similar al de una habitación de hotel, y es un 220% más caro que una habitación privada y un 250% más caro que una habitación compartida.
 
 
 ### ¿Cuantos alojamientos por tipo de habitación y precio hay? ¿Existen diferencias significativas de precio para los diferentes tipos de habitación?
